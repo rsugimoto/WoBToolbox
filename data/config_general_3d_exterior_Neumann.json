@@ -1,0 +1,17 @@
+{
+    "input_obj_file": "data/spot.obj",
+    "output_dir": "results/general_3d_exterior_Neumann/raw_data",
+    "path_length": 4,
+    "num_sample_paths": 1000,
+    "grid_res": 256,
+    "equation_kernel": "PoissonKernel",
+    "__bie_model_options__": "IndirectSingleLayer, IndirectDoubleLayer, Direct",
+    "bie_model": "IndirectSingleLayer",
+    "__domain_options__": "InteriorDomain, ExteriorDomain",
+    "domain": "ExteriorDomain",
+    "__estimator_options__": "BackwardEstimator, ForwardEstimator",
+    "estimator": "ForwardEstimator",
+    "__problem_options__": "DirichletProblem, NeumannProblem, RobinProblem, MixedProblem",
+    "problem": "NeumannProblem",
+    "max_time": 1
+}

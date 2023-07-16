@@ -1,0 +1,5 @@
+CompileFlags:
+  Remove:
+    - -forward-unknown-to-host-compiler
+    - --extended-lambda
+    - --expt-relaxed-constexpr

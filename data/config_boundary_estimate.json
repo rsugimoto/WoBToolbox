@@ -1,0 +1,8 @@
+{
+    "output_dir": "results/boundary_estimate/raw_data",
+    "path_length": 4,
+    "num_sample_paths_domain": 1000,
+    "num_sample_paths_boundary": 20000,
+    "grid_res": 128,
+    "max_time": 1
+}

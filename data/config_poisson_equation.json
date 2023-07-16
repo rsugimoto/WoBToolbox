@@ -1,0 +1,9 @@
+{
+    "output_dir": "results/poisson_equation/raw_data",
+    "path_length": 4,
+    "num_sample_paths": 1000,
+    "num_volume_samples": 16,
+    "grid_res": 256,
+    "eps": 1e-4,
+    "max_time": 1
+}

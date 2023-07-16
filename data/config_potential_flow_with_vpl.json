@@ -1,0 +1,9 @@
+{
+    "output_dir": "results/potential_flow_with_vpl/raw_data",
+    "path_length": 4,
+    "num_sample_paths": 100000,
+    "num_resampling_candidates": 1024,
+    "grid_res": 256,
+    "eps": 1e-4,
+    "max_time": 1
+}

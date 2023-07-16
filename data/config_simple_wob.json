@@ -1,0 +1,10 @@
+{
+    "__comment__": "Run this file with 'build/simple_wob_and_wos data/config_simple_wob.json' and run 'visualize.py results/simple_wob'. The reult images will be generated in 'results/simple_wob/render'",
+    "input_obj_file": "data/bunny_2d.obj",
+    "output_dir": "results/simple_wob/raw_data",
+    "path_length": 4,
+    "num_sample_paths": 1000,
+    "is_wos": false,
+    "max_time": 1,
+    "grid_res": 256
+}

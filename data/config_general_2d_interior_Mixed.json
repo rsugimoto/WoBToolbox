@@ -1,0 +1,20 @@
+{
+    "input_obj_file": "data/bunny_2d.obj",
+    "output_dir": "results/general_2d_interior_Mixed/raw_data",
+    "path_length": 4,
+    "num_resampling_candidates": 64,
+    "num_sample_paths": 1000,
+    "grid_res": 256,
+    "eps": 1e-5,
+    "first_kind_equation_scaling_constant": 2,
+    "equation_kernel": "PoissonKernel",
+    "__bie_model_options__": "IndirectSingleLayer, IndirectDoubleLayer, Direct",
+    "bie_model": "IndirectSingleLayer",
+    "__domain_options__": "InteriorDomain, ExteriorDomain",
+    "domain": "InteriorDomain",
+    "__estimator_options__": "BackwardEstimator, ForwardEstimator",
+    "estimator": "BackwardEstimator",
+    "__problem_options__": "DirichletProblem, NeumannProblem, RobinProblem, MixedProblem",
+    "problem": "MixedProblem",
+    "max_time": 1
+}

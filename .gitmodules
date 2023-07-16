@@ -1,0 +1,15 @@
+[submodule "deps/eigen"]
+	path = deps/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "deps/lbvh"]
+	path = deps/lbvh
+	url = https://github.com/rsugimoto/lbvh.git
+[submodule "deps/libigl"]
+	path = deps/libigl
+	url = https://github.com/libigl/libigl.git
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json.git
+[submodule "deps/thrust"]
+	path = deps/thrust
+	url = https://github.com/NVIDIA/thrust.git
