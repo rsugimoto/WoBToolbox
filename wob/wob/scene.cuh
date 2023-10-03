@@ -123,7 +123,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
     enum WrapMode { Repeat, ClampToEdge, ClampToBorder };
 
     inline __device__ typename value_type<ScalarType, Dim, IsVectorCache>::type
-    sample_nearest(const Eigen::Matrix<ScalarType, Dim, 1> &p, const WrapMode wrap_mode = ClampToBorder) {
+    sample_nearest(const Eigen::Matrix<ScalarType, Dim, 1> &p, const WrapMode wrap_mode = ClampToBorder) const {
         Eigen::Matrix<ScalarType, Dim, 1> idx = utils::domain_point_to_idx<ScalarType, Dim>(p, grid_res, domain_size);
         Eigen::Matrix<int, Dim, 1> int_idx = idx.array().round().matrix().template cast<int>();
         if (wrap_mode == Repeat)
@@ -138,7 +138,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
     }
 
     inline __device__ typename value_type<ScalarType, Dim, IsVectorCache>::type
-    sample_linear(const Eigen::Matrix<ScalarType, Dim, 1> &p, const WrapMode wrap_mode = ClampToBorder) {
+    sample_linear(const Eigen::Matrix<ScalarType, Dim, 1> &p, const WrapMode wrap_mode = ClampToBorder) const {
         Eigen::Matrix<ScalarType, Dim, 1> idx = utils::domain_point_to_idx<ScalarType, Dim>(p, grid_res, domain_size);
         Eigen::Matrix<int, Dim, 1> floor_idx = idx.array().floor().template cast<int>();
         Eigen::Matrix<int, Dim, 1> ceil_idx = floor_idx.array() + 1;
