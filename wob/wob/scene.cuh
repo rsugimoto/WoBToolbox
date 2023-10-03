@@ -79,7 +79,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
     unsigned int grid_res;
     ScalarType domain_size;
     const typename value_type<ScalarType, Dim, IsVectorCache>::type *cache;
-    const ScalarType *cdf;
+    const ScalarType *cdf = nullptr;
 
     inline __device__ thrust::pair<
         DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type>, ScalarType>
@@ -100,6 +100,10 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
     inline __device__ thrust::pair<
         DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type>, ScalarType>
     sample_volme_cache_cache_value_sampling(wob::randomState_t *random_state_ptr) const {
+        if (cdf == nullptr)
+            return {
+                DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type>(), 0.0f};
+
         ScalarType unif = utils::rand_uniform<ScalarType>(random_state_ptr);
         unsigned int idx = binary_search(cdf, int_pow<Dim>(grid_res), unif);
         Eigen::Matrix<ScalarType, Dim, 1> p = utils::idx_to_domain_point<ScalarType, Dim>(idx, grid_res, domain_size);
@@ -113,6 +117,89 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
 
         ScalarType pdf = idx == 0 ? cdf[idx] : cdf[idx] - cdf[idx - 1];
         return {result_point, int_pow<Dim>(domain_size / grid_res) / pdf};
+    }
+
+    // Similar to OpenGL texture wrap mode
+    enum WrapMode { Repeat, ClampToEdge, ClampToBorder };
+
+    inline __device__ typename value_type<ScalarType, Dim, IsVectorCache>::type
+    sample_nearest(const Eigen::Matrix<ScalarType, Dim, 1> &p, const WrapMode wrap_mode = ClampToBorder) {
+        Eigen::Matrix<ScalarType, Dim, 1> idx = utils::domain_point_to_idx<ScalarType, Dim>(p, grid_res, domain_size);
+        Eigen::Matrix<int, Dim, 1> int_idx = idx.array().round().matrix().template cast<int>();
+        if (wrap_mode == Repeat)
+            int_idx = int_idx.unaryExpr([=](const int x) { return x % (int)grid_res; });
+        else if (wrap_mode == ClampToEdge)
+            int_idx = int_idx.array().max(0).min(grid_res - 1).matrix();
+        else if (wrap_mode == ClampToBorder) {
+            Eigen::Matrix<int, Dim, 1> int_idx2 = int_idx.array().max(0).min(grid_res - 1).matrix();
+            if (int_idx != int_idx2) return utils::zero<typename value_type<ScalarType, Dim, IsVectorCache>::type>();
+        }
+        return cache[utils::flatten(int_idx.template cast<unsigned int>().eval(), grid_res)];
+    }
+
+    inline __device__ typename value_type<ScalarType, Dim, IsVectorCache>::type
+    sample_linear(const Eigen::Matrix<ScalarType, Dim, 1> &p, const WrapMode wrap_mode = ClampToBorder) {
+        Eigen::Matrix<ScalarType, Dim, 1> idx = utils::domain_point_to_idx<ScalarType, Dim>(p, grid_res, domain_size);
+        Eigen::Matrix<int, Dim, 1> floor_idx = idx.array().floor().template cast<int>();
+        Eigen::Matrix<int, Dim, 1> ceil_idx = floor_idx.array() + 1;
+
+        if constexpr (Dim == 2) {
+            typename value_type<ScalarType, Dim, IsVectorCache>::type cache_val[2][2];
+            for (int i = 0; i < 2; i++)
+                for (int j = 0; j < 2; j++) {
+                    Eigen::Matrix<int, Dim, 1> int_idx = floor_idx + Eigen::Matrix<int, Dim, 1>(i, j);
+                    if (wrap_mode == Repeat)
+                        int_idx = int_idx.unaryExpr([=](const int x) { return x % (int)grid_res; });
+                    else if (wrap_mode == ClampToEdge)
+                        int_idx = int_idx.array().max(0).min(grid_res - 1).matrix();
+                    else if (wrap_mode == ClampToBorder) {
+                        Eigen::Matrix<int, Dim, 1> int_idx2 = int_idx.array().max(0).min(grid_res - 1).matrix();
+                        if (int_idx != int_idx2) {
+                            cache_val[i][j] = utils::zero<typename value_type<ScalarType, Dim, IsVectorCache>::type>();
+                            continue;
+                        }
+                    }
+                    cache_val[i][j] = cache[utils::flatten(int_idx.template cast<unsigned int>().eval(), grid_res)];
+                }
+
+            return (ceil_idx.x() - idx.x()) *
+                       ((ceil_idx.y() - idx.y()) * cache_val[0][0] + (idx.y() - floor_idx.y()) * cache_val[0][1]) +
+                   (idx.x() - floor_idx.x()) *
+                       ((ceil_idx.y() - idx.y()) * cache_val[1][0] + (idx.y() - floor_idx.y()) * cache_val[1][1]);
+
+        } else if constexpr (Dim == 3) {
+            typename value_type<ScalarType, Dim, IsVectorCache>::type cache_val[2][2][2];
+            for (int i = 0; i < 2; i++)
+                for (int j = 0; j < 2; j++)
+                    for (int k = 0; k < 2; k++) {
+                        Eigen::Matrix<int, Dim, 1> int_idx = floor_idx + Eigen::Matrix<int, Dim, 1>(i, j, k);
+                        if (wrap_mode == Repeat)
+                            int_idx = int_idx.unaryExpr([=](const int x) { return x % (int)grid_res; });
+                        else if (wrap_mode == ClampToEdge)
+                            int_idx = int_idx.array().max(0).min(grid_res - 1).matrix();
+                        else if (wrap_mode == ClampToBorder) {
+                            Eigen::Matrix<int, Dim, 1> int_idx2 = int_idx.array().max(0).min(grid_res - 1).matrix();
+                            if (int_idx != int_idx2) {
+                                cache_val[i][j][k] =
+                                    utils::zero<typename value_type<ScalarType, Dim, IsVectorCache>::type>();
+                                continue;
+                            }
+                        }
+                        cache_val[i][j][k] =
+                            cache[utils::flatten(int_idx.template cast<unsigned int>().eval(), grid_res)];
+                    }
+
+            return (ceil_idx.x() - idx.x()) *
+                       ((ceil_idx.y() - idx.y()) * ((ceil_idx.z() - idx.z()) * cache_val[0][0][0] +
+                                                    (idx.z() - floor_idx.z()) * cache_val[0][0][1]) +
+                        (idx.y() - floor_idx.y()) * ((ceil_idx.z() - idx.z()) * cache_val[0][1][0] +
+                                                     (idx.z() - floor_idx.z()) * cache_val[0][1][1])) +
+                   (idx.x() - floor_idx.x()) *
+                       ((ceil_idx.y() - idx.y()) * ((ceil_idx.z() - idx.z()) * cache_val[1][0][0] +
+                                                    (idx.z() - floor_idx.z()) * cache_val[1][0][1]) +
+                        (idx.y() - floor_idx.y()) * ((ceil_idx.z() - idx.z()) * cache_val[1][1][0] +
+                                                     (idx.z() - floor_idx.z()) * cache_val[1][1][1]));
+        }
     }
 };
 
@@ -146,8 +233,8 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
                          "a reallocation of memory."
                       << std::endl;
         cdf.resize(cache.size());
-        thrust::transform(cache.begin(), cache.end(), cdf.begin(), [](auto &elem) { return elem.norm(); });
-        update(cdf);
+        thrust::transform(cache.begin(), cache.end(), cdf.begin(), [] __device__(auto &elem) { return elem.norm(); });
+        _update(cdf);
     }
 
     void update() { _update(cache); }

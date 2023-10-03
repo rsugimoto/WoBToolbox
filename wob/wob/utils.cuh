@@ -78,6 +78,16 @@ unflatten<2>(unsigned int idx, unsigned int grid_res) noexcept {
     return Eigen::Matrix<unsigned int, 2, 1>(idx % grid_res, idx / grid_res);
 }
 
+inline __host__ __device__ unsigned int
+flatten(const Eigen::Matrix<unsigned int, 2, 1> &idx, unsigned int grid_res) noexcept {
+    return idx.y() * grid_res + idx.x();
+}
+
+inline __host__ __device__ unsigned int
+flatten(const Eigen::Matrix<unsigned int, 3, 1> &idx, unsigned int grid_res) noexcept {
+    return idx.z() * grid_res * grid_res + idx.y() * grid_res + idx.x();
+}
+
 // returns a point in (-domain_size/2, domain_size/2)^Dim
 template <typename ScalarType, unsigned int Dim>
 inline __host__ __device__ Eigen::Matrix<ScalarType, Dim, 1>
@@ -86,6 +96,24 @@ idx_to_domain_point(unsigned int idx, unsigned int grid_res, ScalarType domain_s
     Eigen::Matrix<unsigned int, Dim, 1> x = unflatten<Dim>(idx, grid_res);
     return (x.template cast<ScalarType>() + (ScalarType)0.5 * Eigen::Matrix<ScalarType, Dim, 1>::Ones()) * dx -
            (domain_size / 2) * Eigen::Matrix<ScalarType, Dim, 1>::Ones();
+}
+
+// returns a point in (-domain_size/2, domain_size/2)^Dim
+template <typename ScalarType, unsigned int Dim>
+inline __host__ __device__ Eigen::Matrix<ScalarType, Dim, 1> idx_to_domain_point(
+    const Eigen::Matrix<unsigned int, Dim, 1> &idx, unsigned int grid_res, ScalarType domain_size
+) noexcept {
+    const ScalarType dx = domain_size / grid_res;
+    return (idx.template cast<ScalarType>() + (ScalarType)0.5 * Eigen::Matrix<ScalarType, Dim, 1>::Ones()) * dx -
+           (domain_size / 2) * Eigen::Matrix<ScalarType, Dim, 1>::Ones();
+}
+
+// maps (-domain_size/2, domain_size/2)^Dim to Dim-dimensional idx.
+// Note (-domain_size/2, -domain_size/2) maps to (-0.5, -0.5) instead of (0, 0).
+template <typename ScalarType, unsigned int Dim>
+inline __host__ __device__ Eigen::Matrix<ScalarType, Dim, 1>
+domain_point_to_idx(Eigen::Matrix<ScalarType, Dim, 1> p, unsigned int grid_res, ScalarType domain_size) noexcept {
+    return (grid_res / domain_size) * p + (.5f * grid_res - .5f) * Eigen::Matrix<ScalarType, Dim, 1>::Ones();
 }
 
 template <typename T> inline __host__ __device__ constexpr T zero();
